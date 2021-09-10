@@ -1,12 +1,13 @@
-import React, { MutableRefObject, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList as FlatListType,
   FlatListProps,
+  FlatList as FlatListType,
   ScrollViewProps,
   StyleSheet,
   View,
 } from 'react-native';
+import React, { MutableRefObject, useRef, useState } from 'react';
+
 import { FlatList } from '@stream-io/flat-list-mvcp';
 
 const styles = StyleSheet.create({
@@ -50,6 +51,11 @@ export type Props<T> = Omit<
   onEndReachedThreshold?: number;
   /** If true, inline loading indicators will be shown. Default - true */
   showDefaultLoadingIndicators?: boolean;
+  /** If true loading is already happening */
+  isLoading?: boolean;
+  /** this is for loading pagination loading */
+  dataStartIndex?: number,
+  dataEndIndex?: number,
   /** Custom UI component for header inline loading indicator */
   HeaderLoadingIndicator?: React.ComponentType;
   /** Custom UI component for footer inline loading indicator */
@@ -92,27 +98,29 @@ export const BidirectionalFlatList = (React.forwardRef(
       onStartReached = () => Promise.resolve(),
       onStartReachedThreshold = 10,
       showDefaultLoadingIndicators = true,
+      isLoading = false,
+      dataStartIndex,
+      dataEndIndex,
     } = props;
     const [onStartReachedInProgress, setOnStartReachedInProgress] = useState(
       false
     );
     const [onEndReachedInProgress, setOnEndReachedInProgress] = useState(false);
 
-    const onStartReachedTracker = useRef<Record<number, boolean>>({});
-    const onEndReachedTracker = useRef<Record<number, boolean>>({});
+    const onStartReachedTracker = useRef<Record<number, number>>({});
+    const onEndReachedTracker = useRef<Record<number, number>>({});
 
     const onStartReachedInPromise = useRef<Promise<void> | null>(null);
     const onEndReachedInPromise = useRef<Promise<void> | null>(null);
 
     const maybeCallOnStartReached = () => {
       // If onStartReached has already been called for given data length, then ignore.
-      if (data?.length && onStartReachedTracker.current[data.length]) {
+      if (isLoading || onStartReachedTracker.current[0]=== dataStartIndex && onStartReachedTracker.current[1] === dataEndIndex) {
         return;
       }
 
-      if (data?.length) {
-        onStartReachedTracker.current[data.length] = true;
-      }
+      onStartReachedTracker.current[0]= dataStartIndex;
+      onStartReachedTracker.current[1] = dataEndIndex;
 
       setOnStartReachedInProgress(true);
       const p = () => {
@@ -134,13 +142,12 @@ export const BidirectionalFlatList = (React.forwardRef(
 
     const maybeCallOnEndReached = () => {
       // If onEndReached has already been called for given data length, then ignore.
-      if (data?.length && onEndReachedTracker.current[data.length]) {
+      if (isLoading || onEndReachedTracker.current[0]=== dataStartIndex && onEndReachedTracker.current[1] === dataEndIndex) {
         return;
       }
 
-      if (data?.length) {
-        onEndReachedTracker.current[data.length] = true;
-      }
+      onEndReachedTracker.current[0]= dataStartIndex;
+      onEndReachedTracker.current[1] = dataEndIndex;
 
       setOnEndReachedInProgress(true);
       const p = () => {
